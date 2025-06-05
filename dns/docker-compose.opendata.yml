@@ -1,0 +1,22 @@
+services:
+  opendata_worker:
+    build:
+      context: ./collectors/opendata_service
+      dockerfile: Dockerfile
+    container_name: opendata_worker
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/
+      - PYTHONPATH=/app
+    command: >
+      bash -c "echo 'Iniciando servicio OpenData secuencial...' && 
+               python -u -c 'from tasks import worker_loop; worker_loop()'"
+    volumes:
+      - ./collectors/opendata_service:/app
+    restart: unless-stopped
+    networks:
+      - dominios_net
+
+networks:
+  dominios_net:
+    external: true

@@ -1,0 +1,5 @@
+flask==2.3.3
+pymongo==4.6.0
+pdfkit==1.0.0
+wkhtmltopdf==0.2.5
+pyOpenSSL==23.3.0

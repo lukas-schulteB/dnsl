@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Red de Empresas: {{ query }}{% endblock %}
+
+{% block content %}
+    <style>
+        #network-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .node.company {
+            fill: #ff7f0e;
+        }
+        .node.domain {
+            fill: #1f77b4;
+        }
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+        .node-label {
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255,255,255,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 8px;
+            display: inline-block;
+        }
+    </style>
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="/network">Visualización de Redes</a></li>
+            <li class="breadcrumb-item active">{{ query }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-project-diagram me-2"></i>Red: {{ query }}</h1>
+        <div>
+            <a href="/dashboard" class="btn btn-outline-info me-2">
+                <i class="fas fa-chart-line me-1"></i>Dashboard
+            </a>
+            <a href="/network" class="btn btn-outline-primary">
+                <i class="fas fa-search me-1"></i>Nueva búsqueda
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-sitemap me-2"></i>Visualización de la Red</h4>
+        </div>
+        <div class="card-body p-1">
+            <div id="network-container" class="position-relative">
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #ff7f0e;"></span>
+                        <span>Empresas</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #1f77b4;"></span>
+                        <span>Dominios</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-cogs me-2"></i>Controles</h4>
+                </div>
+                <div class="card-body">
+                    <p>Interacciones disponibles:</p>
+                    <ul>
+                        <li><i class="fas fa-arrows-alt me-2 text-primary"></i><strong>Arrastrar nodos:</strong> Reposicionar elementos</li>
+                        <li><i class="fas fa-search-plus me-2 text-primary"></i><strong>Rueda del ratón:</strong> Hacer zoom</li>
+                        <li><i class="fas fa-mouse-pointer me-2 text-primary"></i><strong>Hover:</strong> Ver detalles</li>
+                        <li><i class="fas fa-mouse me-2 text-primary"></i><strong>Clic:</strong> Ir a página de detalles</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <h5><i class="fas fa-filter me-2"></i>Filtros</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showCompanies" checked>
+                        <label class="form-check-label" for="showCompanies">
+                            <i class="fas fa-building me-1"></i>Mostrar empresas
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showDomains" checked>
+                        <label class="form-check-label" for="showDomains">
+                            <i class="fas fa-globe me-1"></i>Mostrar dominios
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showLocationLinks" checked>
+                        <label class="form-check-label" for="showLocationLinks">
+                            <i class="fas fa-map-marker-alt me-1"></i>Conexiones por ubicación
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showSectorLinks" checked>
+                        <label class="form-check-label" for="showSectorLinks">
+                            <i class="fas fa-industry me-1"></i>Conexiones por sector
+                        </label>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="btn-group" role="group">
+                            <button id="zoom-in" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button id="zoom-out" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button id="reset-zoom" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-home"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-info-circle me-2"></i>Estadísticas</h4>
+                </div>
+                <div class="card-body">
+                    <p>Datos en esta visualización:</p>
+                    <ul>
+                        <li><i class="fas fa-building me-2 text-warning"></i><span id="company-count">{{ stats.companies }}</span> empresas</li>
+                        <li><i class="fas fa-globe me-2 text-primary"></i><span id="domain-count">{{ stats.domains }}</span> dominios</li>
+                        <li><i class="fas fa-link me-2 text-success"></i><span id="connections-count">{{ stats.connections }}</span> conexiones</li>
+                    </ul>
+                    
+                    <div id="legend-container" class="mt-3 border-top pt-3">
+                        <h6>Tipos de conexiones:</h6>
+                        <div class="d-flex align-items-center mb-1">
+                            <div style="width:20px;height:2px;background-color:#007bff;margin-right:8px;"></div>
+                            <span><small>Empresa-dominio</small></span>
+                        </div>
+                        <div class="d-flex align-items-center mb-1">
+                            <div style="width:20px;height:2px;background-color:#ff9800;border-top:2px dashed #ff9800;margin-right:8px;"></div>
+                            <span><small>Misma ubicación</small></span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div style="width:20px;height:2px;background-color:#4caf50;border-top:2px dashed #4caf50;margin-right:8px;"></div>
+                            <span><small>Mismo sector</small></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const graphData = {{ network_data|safe }};
+            
+            console.log('Datos de red recibidos:', graphData);
+            
+            const width = document.getElementById('network-container').offsetWidth;
+            const height = document.getElementById('network-container').offsetHeight;
+            
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+            
+            const svg = d3.select("#network-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .call(d3.zoom()
+                    .scaleExtent([0.1, 5])
+                    .on("zoom", function(event) {
+                        g.attr("transform", event.transform);
+                    })
+                );
+                
+            const g = svg.append("g");
+            
+            // Crear enlaces con colores diferenciados
+            const link = g.append("g")
+                .selectAll("line")
+                .data(graphData.links)
+                .enter().append("line")
+                .attr("class", d => `link ${d.type || "standard"}`)
+                .style("stroke-width", 2)
+                .style("stroke", d => {
+                    switch(d.type) {
+                        case "same_location": return "#ff9800";
+                        case "same_sector": return "#4caf50";
+                        default: return "#007bff";
+                    }
+                })
+                .style("stroke-dasharray", d => 
+                    (d.type === "same_location" || d.type === "same_sector") ? "5,5" : "none"
+                );
+            
+            // Crear nodos
+            const node = g.append("g")
+                .selectAll("circle")
+                .data(graphData.nodes)
+                .enter().append("circle")
+                .attr("class", d => `node ${d.type}`)
+                .attr("r", d => d.type === 'company' ? 15 : 10)
+                .style("cursor", "pointer")
+                .on("mouseover", function(event, d) {
+                    tooltip.transition().duration(200).style("opacity", 0.9);
+                    
+                    let content = '';
+                    if (d.type === 'company') {
+                        content = `
+                            <div class="p-2">
+                                <strong>${d.name}</strong><br>
+                                NIF: ${d.nif || 'N/A'}<br>
+                                ${d.location ? 'Provincia: ' + d.location + '<br>' : ''}
+                                ${d.sector ? 'Sector: ' + d.sector : ''}
+                            </div>
+                        `;
+                    } else {
+                        content = `<div class="p-2"><strong>Dominio:</strong> ${d.name}</div>`;
+                    }
+                    
+                    tooltip.html(content)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                    
+                    d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
+                })
+                .on("mouseout", function() {
+                    tooltip.transition().duration(500).style("opacity", 0);
+                    d3.select(this).attr('stroke', null).attr('stroke-width', 1.5);
+                })
+                .on("click", function(event, d) {
+                    if (d.type === 'company') {
+                        window.open(`/company/${d.nif}`, '_blank');  // ✅ Esto redirige a la página de empresa
+                    } else if (d.type === 'domain') {
+                        window.open(`/report/${d.name}`, '_blank');  // ✅ Esto redirige a la página de dominio
+                    }
+                })
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+            
+            // Etiquetas
+            const label = g.append("g")
+                .selectAll("text")
+                .data(graphData.nodes)
+                .enter().append("text")
+                .attr("class", "node-label")
+                .attr("dy", ".35em")
+                .attr("text-anchor", "middle")
+                .text(d => {
+                    if (d.type === 'company') {
+                        return d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name;
+                    } else {
+                        return d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name;
+                    }
+                })
+                .style("pointer-events", "none");
+            
+            // Simulación de fuerzas
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(100))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(30));
+            
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+                
+                label
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.type === 'company' ? d.y - 20 : d.y - 15);
+            });
+            
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // Controles de zoom
+            document.getElementById('zoom-in').addEventListener('click', function() {
+                const currentTransform = d3.zoomTransform(svg.node());
+                svg.transition().duration(300).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                        .translate(currentTransform.x, currentTransform.y)
+                        .scale(currentTransform.k * 1.5)
+                );
+            });
+            
+            document.getElementById('zoom-out').addEventListener('click', function() {
+                const currentTransform = d3.zoomTransform(svg.node());
+                svg.transition().duration(300).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                        .translate(currentTransform.x, currentTransform.y)
+                        .scale(currentTransform.k / 1.5)
+                );
+            });
+            
+            document.getElementById('reset-zoom').addEventListener('click', function() {
+                svg.transition().duration(300).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+            });
+            
+            // Filtros
+            document.getElementById('showCompanies').addEventListener('change', function() {
+                const show = this.checked;
+                node.style('display', d => d.type === 'company' ? (show ? 'block' : 'none') : null);
+                label.style('display', d => d.type === 'company' ? (show ? 'block' : 'none') : null);
+                updateLinkVisibility();
+            });
+            
+            document.getElementById('showDomains').addEventListener('change', function() {
+                const show = this.checked;
+                node.style('display', d => d.type === 'domain' ? (show ? 'block' : 'none') : null);
+                label.style('display', d => d.type === 'domain' ? (show ? 'block' : 'none') : null);
+                updateLinkVisibility();
+            });
+            
+            document.getElementById('showLocationLinks').addEventListener('change', function() {
+                const show = this.checked;
+                link.style('display', d => d.type === 'same_location' ? (show ? 'block' : 'none') : null);
+            });
+            
+            document.getElementById('showSectorLinks').addEventListener('change', function() {
+                const show = this.checked;
+                link.style('display', d => d.type === 'same_sector' ? (show ? 'block' : 'none') : null);
+            });
+            
+            function updateLinkVisibility() {
+                const showCompanies = document.getElementById('showCompanies').checked;
+                const showDomains = document.getElementById('showDomains').checked;
+                
+                link.style('display', function(d) {
+                    const sourceNode = graphData.nodes.find(n => n.id === d.source.id);
+                    const targetNode = graphData.nodes.find(n => n.id === d.target.id);
+                    
+                    if (!sourceNode || !targetNode) return 'none';
+                    
+                    if (!showCompanies && (sourceNode.type === 'company' || targetNode.type === 'company')) 
+                        return 'none';
+                    if (!showDomains && (sourceNode.type === 'domain' || targetNode.type === 'domain')) 
+                        return 'none';
+                    
+                    return 'block';
+                });
+            }
+        });
+    </script>
+{% endblock %}

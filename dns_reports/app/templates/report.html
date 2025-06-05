@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block title %}Domain Report: {{ report.dominio }}{% endblock %}
+
+{% block content %}
+<h1><i class="fas fa-globe me-2"></i>Domain Report: {{ report.dominio }}</h1>
+
+<!-- Basic Info -->
+<div class="card mb-4">
+    <div class="card-header bg-primary">
+        <h3><i class="fas fa-info-circle me-2"></i>Basic Information</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>Domain:</strong> {{ report.dominio }}</p>
+        <p><strong>Titular:</strong> {{ report.titular or "Not available" }}</p>
+        <p><strong>Last checked:</strong> {{ report.fecha_consulta.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+</div>
+
+<!-- DNS Records -->
+{% if report.dns %}
+<div class="card mb-4">
+    <div class="card-header bg-info">
+        <h3><i class="fas fa-server me-2"></i>DNS Records</h3>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="dnsAccordion">
+            {% for record_type, records in report.dns.items() %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ record_type }}">
+                        {{ record_type }} Records ({{ records|length }})
+                    </button>
+                </h2>
+                <div id="collapse{{ record_type }}" class="accordion-collapse collapse show">
+                    <div class="accordion-body">
+                        <!-- Show record content based on type -->
+                        {% if record_type == 'A' %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>IP</th>
+                                        <th>ASN</th>
+                                        <th>ASN CIDR</th>
+                                        <th>Country</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in records %}
+                                    <tr>
+                                        <td>{{ record.ip }}</td>
+                                        <td>{{ record.asn or 'Unknown' }} - {{ record.asn_desc or '' }}</td>
+                                        <td>{{ record.asn_cidr or 'N/A' }}</td>
+                                        <td>{{ record.country or 'Unknown' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% elif record_type == 'MX' %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Exchange</th>
+                                        <th>Preference</th>
+                                        <th>IP Addresses</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in records %}
+                                    <tr>
+                                        <td>{{ record.exchange }}</td>
+                                        <td>{{ record.preference }}</td>
+                                        <td>
+                                            {% for ip_info in record.ips %}
+                                            <div>{{ ip_info.ip }} ({{ ip_info.country or 'Unknown' }})</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% elif record_type == 'NS' %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Nameserver</th>
+                                        <th>IP</th>
+                                        <th>ASN</th>
+                                        <th>ASN CIDR</th>
+                                        <th>País</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for ns in records %}
+                                    <tr>
+                                        <td>{{ ns.ns_host }}</td>
+                                        <td>
+                                            {% for ip in ns.ips %}
+                                            <div>{{ ip.ip }}</div>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for ip in ns.ips %}
+                                            <div>{{ ip.asn }}</div>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for ip in ns.ips %}
+                                            <div>{{ ip.asn_cidr or 'N/A' }}</div>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for ip in ns.ips %}
+                                            <div>{{ ip.country }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% elif record_type == 'TXT' %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Registro TXT</th>
+                                        <th>Propósito</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for txt in records %}
+                                    <tr>
+                                        {% if txt is mapping %}
+                                            <td>
+                                                {% if txt.value %}
+                                                    <code>{{ txt.value }}</code>
+                                                {% elif txt.txt %}
+                                                    <code>{{ txt.txt }}</code>
+                                                {% else %}
+                                                    <code>{{ txt|tojson }}</code>
+                                                {% endif %}
+                                            </td>
+                                        {% else %}
+                                            <td><code>{{ txt }}</code></td>
+                                        {% endif %}
+                                        <td>
+                                            {% set txt_value = txt.value if txt is mapping and txt.value else txt %}
+                                            {% if txt_value is string and "v=spf1" in txt_value %}
+                                                SPF - Política de remitentes autorizados
+                                            {% elif txt_value is string and "v=DMARC1" in txt_value %}
+                                                DMARC - Validación de correo
+                                            {% elif txt is mapping and txt.name is defined and "_dmarc" in txt.name %}
+                                                DMARC - Configuración
+                                            {% elif txt_value is string and "google-site-verification" in txt_value %}
+                                                Verificación Google
+                                            {% elif txt_value is string and "MS=" in txt_value %}
+                                                Verificación Microsoft
+                                            {% else %}
+                                                Otro
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <pre>{{ records|tojson(indent=2) }}</pre>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- SSL Certificate -->
+{% if report.ssl %}
+<div class="card mb-4">
+    <div class="card-header bg-success">
+        <h3><i class="fas fa-lock me-2"></i>SSL Certificate</h3>
+    </div>
+    <div class="card-body">
+        {% if report.ssl %}
+        <p><strong>Emisor:</strong> {{ report.ssl.issuer.get('O', '') }} {{ report.ssl.issuer.get('CN', '') }}</p>
+        <p><strong>Válido desde:</strong> {{ report.ssl.valid_from }}</p>
+        <p><strong>Válido hasta:</strong> {{ report.ssl.valid_to }}</p>
+        {% elif specialized.certgraph.direct_verification %}
+        <p><strong>Emisor:</strong> {{ specialized.certgraph.certificados[0].issuer.get('O', '') }}</p>
+        <p><strong>Válido desde:</strong> {{ specialized.certgraph.certificados[0].valid_from }}</p>
+        <p><strong>Válido hasta:</strong> {{ specialized.certgraph.certificados[0].valid_to }}</p>
+        <p class="text-muted"><small>(Verificado directamente)</small></p>
+        {% else %}
+        <p>No se encontró certificado SSL principal.</p>
+        <p class="text-muted"><small>Posibles causas:</small></p>
+        <ul class="text-muted small">
+            <li>El dominio no tiene SSL configurado</li>
+            <li>El servidor no estaba disponible durante el análisis</li>
+            <li>Error durante la verificación de certificados</li>
+        </ul>
+        {% endif %}
+    </div>
+    <div class="card-footer text-end">
+        <a href="/verify/ssl/{{ report.dominio }}" class="btn btn-sm btn-primary">
+            Verificar Certificado Ahora
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Company Information -->
+{% if report.empresa %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h3><i class="fas fa-building me-2"></i>Company Information</h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>NIF:</strong> {{ report.empresa.nif }}</p>
+                <p><strong>Name:</strong> {{ report.empresa.denominacion }}</p>
+                <p><strong>Status:</strong> {{ report.empresa.estado }}</p>
+            </div>
+            <div class="col-md-6">
+                <h4>Address:</h4>
+                <address>
+                {% if report.empresa and report.empresa.domicilio %}
+                    {{ report.empresa.domicilio.direccion or '' }}<br>
+                    {{ report.empresa.domicilio.codigo_postal or '' }} {{ report.empresa.domicilio.localidad or '' }}<br>
+                    {{ report.empresa.domicilio.provincia or '' }}
+                {% else %}
+                    <em class="text-muted">Información de domicilio no disponible</em>
+                {% endif %}
+                </address>
+            </div>
+        </div>
+        
+        {% if report.empresa.dominios_sociedad %}
+        <h4>Associated Domains:</h4>
+        <ul>
+            {% for dom in report.empresa.dominios_sociedad %}
+            <li>
+                <a href="/report/{{ dom.dominio }}">{{ dom.dominio }}</a>
+                {% if not dom.vigente %}<span class="badge bg-secondary">Not active</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    <div class="card-footer text-end">
+        <a href="/company-details/{{ report.dominio }}" class="btn btn-sm btn-info">
+            <i class="fas fa-building me-2"></i>Ver detalles completos de la empresa
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Subdomains -->
+{% if report.subdominios %}
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h3><i class="fas fa-sitemap me-2"></i>Subdomains</h3>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="subdomainsAccordion">
+            {% for sub in report.subdominios %}
+                {% if sub.subdominio %}
+                {% set outer_loop = loop.index %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSub{{ loop.index }}" aria-expanded="false" aria-controls="collapseSub{{ loop.index }}">
+                            {{ sub.subdominio }}
+                            {% if sub.dns %}
+                                <span class="badge bg-primary ms-2">{{ sub.dns|length }} record types</span>
+                            {% endif %}
+                        </button>
+                    </h2>
+                    <div id="collapseSub{{ loop.index }}" class="accordion-collapse collapse">
+                        <div class="accordion-body">
+                            {% if sub.dns %}
+                                <div class="accordion" id="subDnsAccordion{{ outer_loop }}">
+                                    {% for record_type, records in sub.dns.items() %}
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSubDns{{ outer_loop }}_{{ record_type }}">
+                                                {{ record_type }} Records ({{ records|length }})
+                                            </button>
+                                        </h2>
+                                        <div id="collapseSubDns{{ outer_loop }}_{{ record_type }}" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                {% if record_type == 'A' %}
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>IP</th>
+                                                                <th>ASN</th>
+                                                                <th>ASN CIDR</th>
+                                                                <th>Country</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for record in records %}
+                                                            <tr>
+                                                                <td>{{ record.ip }}</td>
+                                                                <td>{{ record.asn or 'Unknown' }} - {{ record.asn_desc or '' }}</td>
+                                                                <td>{{ record.asn_cidr or 'N/A' }}</td>
+                                                                <td>{{ record.country or 'Unknown' }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                {% elif record_type == 'MX' %}
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Exchange</th>
+                                                                <th>Preference</th>
+                                                                <th>IP Addresses</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for record in records %}
+                                                            <tr>
+                                                                <td>{{ record.exchange }}</td>
+                                                                <td>{{ record.preference }}</td>
+                                                                <td>
+                                                                    {% if record.ips %}
+                                                                        {% for ip_info in record.ips %}
+                                                                        <div>{{ ip_info.ip }} ({{ ip_info.country or 'Unknown' }})</div>
+                                                                        {% endfor %}
+                                                                    {% else %}
+                                                                        <span class="text-muted">No IP info</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                {% elif record_type == 'NS' %}
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Nameserver</th>
+                                                                <th>IP</th>
+                                                                <th>ASN</th>
+                                                                <th>ASN CIDR</th>
+                                                                <th>País</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        {% for ns in records %}
+                                                            <tr>
+                                                                <td>{{ ns.ns_host if ns.ns_host else ns }}</td>
+                                                                <td>
+                                                                    {% if ns.ips %}
+                                                                        {% for ip in ns.ips %}
+                                                                        <div>{{ ip.ip }}</div>
+                                                                        {% endfor %}
+                                                                    {% else %}
+                                                                        <span class="text-muted">No IP info</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if ns.ips %}
+                                                                        {% for ip in ns.ips %}
+                                                                        <div>{{ ip.asn or 'Unknown' }}</div>
+                                                                        {% endfor %}
+                                                                    {% else %}
+                                                                        <span class="text-muted">N/A</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if ns.ips %}
+                                                                        {% for ip in ns.ips %}
+                                                                        <div>{{ ip.asn_cidr or 'N/A' }}</div>
+                                                                        {% endfor %}
+                                                                    {% else %}
+                                                                        <span class="text-muted">N/A</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if ns.ips %}
+                                                                        {% for ip in ns.ips %}
+                                                                        <div>{{ ip.country or 'Unknown' }}</div>
+                                                                        {% endfor %}
+                                                                    {% else %}
+                                                                        <span class="text-muted">Unknown</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                {% elif record_type == 'CNAME' %}
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Target</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for record in records %}
+                                                            <tr>
+                                                                <td>{{ record.target if record.target else record }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                {% elif record_type == 'TXT' %}
+                                                    <table class="table table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Registro TXT</th>
+                                                                <th>Propósito</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        {% for txt in records %}
+                                                            <tr>
+                                                                {% if txt is mapping %}
+                                                                    <td>
+                                                                        {% if txt.value %}
+                                                                            <code>{{ txt.value }}</code>
+                                                                        {% elif txt.txt %}
+                                                                            <code>{{ txt.txt }}</code>
+                                                                        {% else %}
+                                                                            <code>{{ txt|tojson }}</code>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                {% else %}
+                                                                    <td><code>{{ txt }}</code></td>
+                                                                {% endif %}
+                                                                <td>
+                                                                    {% set txt_value = txt.value if txt is mapping and txt.value else txt %}
+                                                                    {% if txt_value is string and "v=spf1" in txt_value %}
+                                                                        SPF - Política de remitentes autorizados
+                                                                    {% elif txt_value is string and "v=DMARC1" in txt_value %}
+                                                                        DMARC - Validación de correo
+                                                                    {% elif txt is mapping and txt.name is defined and "_dmarc" in txt.name %}
+                                                                        DMARC - Configuración
+                                                                    {% elif txt_value is string and "google-site-verification" in txt_value %}
+                                                                        Verificación Google
+                                                                    {% elif txt_value is string and "MS=" in txt_value %}
+                                                                        Verificación Microsoft
+                                                                    {% else %}
+                                                                        Otro
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                {% else %}
+                                                    <pre>{{ records|tojson(indent=2) }}</pre>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-exclamation-circle fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No se encontraron registros DNS para este subdominio.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Datos Especializados -->
+{% if specialized %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h3><i class="fas fa-tools me-2"></i>Datos de Herramientas Especializadas</h3>
+    </div>
+    <div class="card-body">
+        <!-- Certificados (CertGraph) -->
+        {% if specialized.certgraph %}
+        <div class="mb-4">
+            <h4>Certificados y Fingerprints</h4>
+            
+            <div class="accordion" id="certGraphAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCertGraph">
+                            Certificados SSL ({{ specialized.certgraph.certificados|default([])|length }})
+                        </button>
+                    </h2>
+                    <div id="collapseCertGraph" class="accordion-collapse collapse show">
+                        <div class="accordion-body">
+                            <!-- Fingerprints mejorados para mejor legibilidad -->
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <i class="fas fa-fingerprint me-2"></i>Fingerprints
+                                </div>
+                                <div class="card-body">
+                                    {% if specialized.certgraph.certificados and specialized.certgraph.certificados|length > 0 %}
+                                    <div class="row">
+                                        {% for cert in specialized.certgraph.certificados %}
+                                        <div class="col-12 mb-3">
+                                            <div class="border rounded p-3 bg-light">
+                                                <div class="mb-2">
+                                                    <strong>Fingerprint:</strong>
+                                                    <code class="d-block mt-1 p-2 bg-dark text-light rounded">{{ cert.fingerprint }}</code>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <strong>Dominios asociados:</strong>
+                                                    {% if cert.alternative_names %}
+                                                        <div class="mt-1">
+                                                            {% for domain in cert.alternative_names %}
+                                                            <span class="badge bg-primary me-1 mb-1">{{ domain }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted">No se encontraron dominios asociados</span>
+                                                    {% endif %}
+                                                </div>
+                                                {% if cert.issuer %}
+                                                <div class="mb-1">
+                                                    <small class="text-muted">
+                                                        <strong>Emisor:</strong> {{ cert.issuer.get('O', 'N/A') }}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                                {% if cert.valid_to %}
+                                                <div>
+                                                    <small class="text-muted">
+                                                        <strong>Válido hasta:</strong> {{ cert.valid_to }}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-exclamation-circle fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted">No se encontraron fingerprints de certificados.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dominios Crosslinked -->
+        {% if specialized.crosslinked %}
+        <div class="mb-4">
+            <h4>Dominios Relacionados</h4>
+            <div class="accordion" id="crosslinkedAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCrosslinked">
+                            Dominios Vinculados
+                        </button>
+                    </h2>
+                    <div id="collapseCrosslinked" class="accordion-collapse collapse show">
+                        <div class="accordion-body">
+                            {% if specialized.crosslinked.related_domains %}
+                                <div class="list-group">
+                                {% for domain in specialized.crosslinked.related_domains %}
+                                    <a href="/report/{{ domain }}" class="list-group-item list-group-item-action">
+                                        <i class="fas fa-external-link-alt me-2"></i>{{ domain }}
+                                    </a>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No se encontraron dominios relacionados.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Historial -->
+{% if history %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3><i class="fas fa-history me-2"></i>Historial del Dominio</h3>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Registros DNS</th>
+                    <th>SSL</th>
+                    <th>Subdominios</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in history %}
+                <tr>
+                    <td>{{ record.fecha.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ record.registros_dns }}</td>
+                    <td>{% if record.tiene_ssl %}<span class="badge bg-success">Activo</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                    <td>{{ record.subdominios }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="d-flex gap-3 mb-4">
+    <a href="/export/pdf/{{ report.dominio }}" class="btn btn-danger">
+        <i class="fas fa-file-pdf me-2"></i>Export to PDF
+    </a>
+    <a href="/" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Search
+    </a>
+</div>
+{% endblock %}

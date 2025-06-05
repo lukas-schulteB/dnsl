@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Análisis de Dominios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-card {
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .asn-card {
+            border-left: 4px solid #6c757d;
+            transition: all 0.3s ease;
+        }
+        .asn-card:hover {
+            border-left-color: #0d6efd;
+            transform: translateX(5px);
+        }
+        .asn-rank {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .asn-rank.rank-1 { background: linear-gradient(45deg, #ffd700, #ffb347); }
+        .asn-rank.rank-2 { background: linear-gradient(45deg, #c0c0c0, #a8a8a8); }
+        .asn-rank.rank-3 { background: linear-gradient(45deg, #cd7f32, #b8860b); }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-line me-2"></i>Dashboard de Análisis de Dominios</h1>
+            <div>
+                <a href="/network" class="btn btn-info me-2">
+                    <i class="fas fa-project-diagram me-1"></i>Análisis de Redes
+                </a>
+                <a href="/" class="btn btn-outline-primary">
+                    <i class="fas fa-search me-1"></i>Volver al Inicio
+                </a>
+            </div>
+        </div>
+
+        <!-- Estadísticas Principales -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card stats-card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-globe fa-2x mb-2"></i>
+                        <h5 class="card-title">Total Dominios</h5>
+                        <h2 class="display-4">{{ stats.total }}</h2>
+                        <p class="card-text">Analizados en la BD</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-building fa-2x mb-2"></i>
+                        <h5 class="card-title">Con Empresa</h5>
+                        <h2 class="display-4">{{ stats.with_company }}</h2>
+                        <p class="card-text">
+                            {% if stats.total > 0 %}
+                                {{ ((stats.with_company / stats.total) * 100)|round(1) }}% identificadas
+                            {% else %}
+                                0% identificadas
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <i class="fas fa-sitemap fa-2x mb-2"></i>
+                        <h5 class="card-title">Con Subdominios</h5>
+                        <h2 class="display-4">{{ stats.with_subdomains }}</h2>
+                        <p class="card-text">Dominios expandidos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Análisis Principal -->
+        <div class="row mb-4">
+            <!-- Distribución por Provincia -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4><i class="fas fa-map-marker-alt me-2"></i>Top Provincias</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if provincias %}
+                        <div class="chart-container">
+                            <canvas id="provinciasChart"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted"></i>
+                            <p class="text-muted mt-2">No hay datos de provincias disponibles</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Sectores Empresariales -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h4><i class="fas fa-industry me-2"></i>Top Sectores Empresariales</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if sectores %}
+                        <div class="chart-container">
+                            <canvas id="sectoresChart"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-industry fa-3x text-muted"></i>
+                            <p class="text-muted mt-2">Empresas sin CNAE registrado</p>
+                            <small class="text-muted">
+                                De {{ stats.with_company }} empresas identificadas, 
+                                {{ stats.without_cnae or 'muchas' }} no tienen código CNAE registrado
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top ASN mejorado -->
+        {% if top_asn %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h4><i class="fas fa-server me-2"></i>Top Proveedores de Hosting (ASN)</h4>
+                        <small>Principales proveedores por número de dominios únicos</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for asn in top_asn %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card asn-card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-3">
+                                            {% if loop.index <= 3 %}
+                                            <div class="asn-rank rank-{{ loop.index }} me-3">
+                                                {{ loop.index }}
+                                            </div>
+                                            {% else %}
+                                            <div class="asn-rank me-3">
+                                                {{ loop.index }}
+                                            </div>
+                                            {% endif %}
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">
+                                                    {% if asn.name and asn.name != asn.asn_number %}
+                                                        {{ asn.name[:30] }}{% if asn.name|length > 30 %}...{% endif %}
+                                                    {% else %}
+                                                        ASN {{ asn.asn_number }}
+                                                    {% endif %}
+                                                </h6>
+                                                <p class="text-muted small mb-2">ASN: {{ asn.asn_number if asn.asn_number else 'N/A' }}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <div class="border-end">
+                                                    <h4 class="text-primary mb-0">{{ asn.count }}</h4>
+                                                    <small class="text-muted">Dominios</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <h5 class="text-success mb-0">
+                                                    {% if stats.total > 0 %}
+                                                        {{ ((asn.count / stats.total) * 100)|round(1) }}%
+                                                    {% else %}
+                                                        0%
+                                                    {% endif %}
+                                                </h5>
+                                                <small class="text-muted">del total</small>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if asn.country %}
+                                        <div class="mt-3 pt-2 border-top">
+                                            <small class="text-muted">
+                                                <i class="fas fa-globe me-1"></i>{{ asn.country }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Scripts para los gráficos -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                {% if provincias %}
+                // Gráfico de provincias
+                const provinciasCtx = document.getElementById('provinciasChart').getContext('2d');
+                new Chart(provinciasCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [{% for provincia in provincias %}'{{ provincia._id }}',{% endfor %}],
+                        datasets: [{
+                            label: 'Dominios por Provincia',
+                            data: [{% for provincia in provincias %}{{ provincia.count }},{% endfor %}],
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+                {% endif %}
+                
+                {% if sectores %}
+                // Gráfico de sectores con colores únicos
+                const sectoresCtx = document.getElementById('sectoresChart').getContext('2d');
+                new Chart(sectoresCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [{% for sector in sectores %}'{{ sector.sector_name }}',{% endfor %}],
+                        datasets: [{
+                            data: [{% for sector in sectores %}{{ sector.count }},{% endfor %}],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',   // Rojo
+                                'rgba(54, 162, 235, 0.8)',   // Azul
+                                'rgba(255, 206, 86, 0.8)',   // Amarillo
+                                'rgba(75, 192, 192, 0.8)',   // Verde-azul
+                                'rgba(153, 102, 255, 0.8)',  // Púrpura
+                                'rgba(255, 159, 64, 0.8)',   // Naranja
+                                'rgba(201, 203, 207, 0.8)',  // Gris
+                                'rgba(255, 99, 255, 0.8)'    // Magenta
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+                {% endif %}
+            });
+        </script>
+    </div>
+</body>
+</html>

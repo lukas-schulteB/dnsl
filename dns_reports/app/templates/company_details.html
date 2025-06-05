@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles de Empresa: {{ company_data.empresa.denominacion }}{% endblock %}
+
+{% block content %}
+    <style>
+        .status-badge-active {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .status-badge-inactive {
+            background-color: #6c757d;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .info-item {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+
+    <div class="container mt-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="/search?q={{ company_data.dominio }}">Resultados de búsqueda</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ company_data.empresa.denominacion }}</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h1>{{ company_data.empresa.denominacion }}</h1>
+                <h5 class="text-muted">{{ company_data.dominio }}</h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/report/{{ company_data.dominio }}" class="btn btn-primary">Ver informe de dominio</a>
+            </div>
+        </div>
+
+        <!-- Resumen de la empresa -->
+        <div class="card mb-4 mt-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Información básica</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item"><strong>NIF:</strong> {{ company_data.empresa.nif }}</div>
+                        <div class="info-item"><strong>Denominación:</strong> {{ company_data.empresa.denominacion }}</div>
+                        <div class="info-item"><strong>Estado:</strong> 
+                            <span class="{{ 'status-badge-active' if company_data.empresa.estado == 'VIGENTE' else 'status-badge-inactive' }}">
+                                {{ company_data.empresa.estado }}
+                            </span>
+                        </div>
+                        <div class="info-item"><strong>Forma social:</strong> {{ company_data.empresa.forma_social }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item"><strong>CNAE:</strong> 
+                            {% if company_data.empresa.actividad_economica and company_data.empresa.actividad_economica.cnae_codigo %}
+                                {{ company_data.empresa.actividad_economica.cnae_codigo }} - {{ company_data.empresa.actividad_economica.cnae_descripcion }}
+                            {% else %}
+                                No disponible
+                            {% endif %}
+                        </div>
+                        <div class="info-item"><strong>Registro:</strong> {{ company_data.empresa.registro or "No disponible" }}</div>
+                        <div class="info-item"><strong>EUID:</strong> {{ company_data.empresa.euid or "No disponible" }}</div>
+                        <div class="info-item"><strong>Fecha consulta:</strong> {{ company_data.fecha_consulta.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Domicilio -->
+        {% if company_data.empresa.domicilio %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h3>Domicilio</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-item"><strong>Dirección:</strong> {{ company_data.empresa.domicilio.direccion }}</div>
+                <div class="info-item"><strong>Población:</strong> {{ company_data.empresa.domicilio.poblacion }}</div>
+                <div class="info-item"><strong>Provincia:</strong> {{ company_data.empresa.domicilio.provincia }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actividad Económica -->
+        {% if company_data.empresa.actividad_economica %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h3>Actividad Económica</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-item"><strong>CNAE Código:</strong> {{ company_data.empresa.actividad_economica.cnae_codigo }}</div>
+                <div class="info-item"><strong>CNAE Descripción:</strong> {{ company_data.empresa.actividad_economica.cnae_descripcion }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dominios asociados -->
+        {% if related_domains and related_domains|length > 0 %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h3>Dominios asociados</h3>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for domain in related_domains %}
+                    <a href="/report/{{ domain.dominio }}" class="list-group-item list-group-item-action">
+                        {{ domain.dominio }}
+                        <span class="badge bg-info float-end">{{ domain.fecha_consulta.strftime('%Y-%m-%d') }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

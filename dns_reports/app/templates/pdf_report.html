@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Domain Report: {{ report.dominio }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; }
+        .header h1 { color: #2c3e50; margin-bottom: 5px; }
+        .header h2 { color: #3498db; margin: 5px 0; }
+        .section { margin-bottom: 25px; page-break-inside: avoid; }
+        .section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-bottom: 15px; }
+        .section h3 { color: #34495e; margin-top: 20px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 10px; text-align: left; vertical-align: top; }
+        th { background-color: #ecf0f1; color: #2c3e50; font-weight: bold; }
+        .footer { text-align: center; font-size: 0.8em; color: #777; margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
+        .subdomain-list { max-height: none; }
+        .badge { background-color: #3498db; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; }
+        .warning { background-color: #f39c12; }
+        .danger { background-color: #e74c3c; }
+        .success { background-color: #27ae60; }
+        ul { margin: 5px 0; padding-left: 20px; }
+        .two-column { display: table; width: 100%; }
+        .column { display: table-cell; width: 50%; padding-right: 10px; vertical-align: top; }
+        .fingerprint { font-family: monospace; font-size: 0.9em; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Domain Intelligence Report</h1>
+        <h2>{{ report.dominio }}</h2>
+        <p>Generated on: {{ report.fecha_consulta.strftime('%Y-%m-%d %H:%M:%S') if report.fecha_consulta else 'N/A' }}</p>
+    </div>
+    
+    <!-- Basic Information -->
+    <div class="section">
+        <h2>Basic Information</h2>
+        <table>
+            <tr>
+                <th width="25%">Domain</th>
+                <td>{{ report.dominio }}</td>
+            </tr>
+            <tr>
+                <th>Titular</th>
+                <td>{{ report.titular or "Not available" }}</td>
+            </tr>
+            {% if report.registrar %}
+            <tr>
+                <th>Registrar</th>
+                <td>{{ report.registrar }}</td>
+            </tr>
+            {% endif %}
+            {% if report.creation_date %}
+            <tr>
+                <th>Creation Date</th>
+                <td>{{ report.creation_date }}</td>
+            </tr>
+            {% endif %}
+            {% if report.expiration_date %}
+            <tr>
+                <th>Expiration Date</th>
+                <td>{{ report.expiration_date }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>Last Updated</th>
+                <td>{{ report.fecha_consulta.strftime('%Y-%m-%d %H:%M:%S') if report.fecha_consulta else 'N/A' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Company Info if available -->
+    {% if report.empresa %}
+    <div class="section">
+        <h2>Company Information</h2>
+        <table>
+            <tr>
+                <th width="25%">NIF</th>
+                <td>{{ report.empresa.nif or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Company Name</th>
+                <td>{{ report.empresa.denominacion or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>{{ report.empresa.estado or 'N/A' }}</td>
+            </tr>
+            {% if report.empresa.forma_juridica %}
+            <tr>
+                <th>Legal Form</th>
+                <td>{{ report.empresa.forma_juridica or 'N/A' }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.fecha_constitucion %}
+            <tr>
+                <th>Constitution Date</th>
+                <td>{{ report.empresa.fecha_constitucion }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.capital_social %}
+            <tr>
+                <th>Share Capital</th>
+                <td>{{ report.empresa.capital_social }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        {% if report.empresa.domicilio %}
+        <h3>Address Information</h3>
+        <table>
+            {% if report.empresa.domicilio.direccion %}
+            <tr>
+                <th width="25%">Address</th>
+                <td>{{ report.empresa.domicilio.direccion }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.domicilio.codigo_postal %}
+            <tr>
+                <th>Postal Code</th>
+                <td>{{ report.empresa.domicilio.codigo_postal }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.domicilio.localidad %}
+            <tr>
+                <th>City</th>
+                <td>{{ report.empresa.domicilio.localidad }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.domicilio.provincia %}
+            <tr>
+                <th>Province</th>
+                <td>{{ report.empresa.domicilio.provincia }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        {% endif %}
+
+        {% if report.empresa.actividad_economica %}
+        <h3>Economic Activity</h3>
+        <table>
+            {% if report.empresa.actividad_economica.cnae_codigo %}
+            <tr>
+                <th width="25%">CNAE Code</th>
+                <td>{{ report.empresa.actividad_economica.cnae_codigo }}</td>
+            </tr>
+            {% endif %}
+            {% if report.empresa.actividad_economica.cnae_descripcion %}
+            <tr>
+                <th>CNAE Description</th>
+                <td>{{ report.empresa.actividad_economica.cnae_descripcion }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Identification (if available and different from empresa) -->
+    {% if report.identificacion and (not report.empresa or report.identificacion != report.empresa.get('nif')) %}
+    <div class="section">
+        <h2>Identification</h2>
+        <table>
+            <tr>
+                <th width="25%">Identification</th>
+                <td>{{ report.identificacion }}</td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- DNS Records -->
+    {% if report.dns %}
+    <div class="section">
+        <h2>DNS Records</h2>
+        
+        {% if report.dns.A %}
+        <h3>A Records (IPv4)</h3>
+        <table>
+            <tr>
+                <th>IP Address</th>
+                <th>ASN</th>
+                <th>ASN Description</th>
+                <th>Country</th>
+                <th>ISP</th>
+            </tr>
+            {% for record in report.dns.A %}
+            <tr>
+                <td>{{ record.ip or 'N/A' }}</td>
+                <td>{{ record.asn or 'N/A' }}</td>
+                <td>{{ record.asn_desc or 'N/A' }}</td>
+                <td>{{ record.country or 'N/A' }}</td>
+                <td>{{ record.isp or 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if report.dns.AAAA %}
+        <h3>AAAA Records (IPv6)</h3>
+        <table>
+            <tr>
+                <th>IPv6 Address</th>
+                <th>Additional Info</th>
+            </tr>
+            {% for record in report.dns.AAAA %}
+            <tr>
+                <td>{{ record.ip if record.ip else record }}</td>
+                <td>{{ record.info if record.info else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if report.dns.CNAME %}
+        <h3>CNAME Records</h3>
+        <table>
+            <tr>
+                <th>Canonical Name</th>
+            </tr>
+            {% for record in report.dns.CNAME %}
+            <tr>
+                <td>{{ record.target if record.target else record }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if report.dns.MX %}
+        <h3>MX Records (Mail Exchange)</h3>
+        <table>
+            <tr>
+                <th>Priority</th>
+                <th>Mail Server</th>
+            </tr>
+            {% for record in report.dns.MX %}
+            <tr>
+                <td>{{ record.priority if record.priority else 'N/A' }}</td>
+                <td>{{ record.exchange if record.exchange else record }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if report.dns.NS %}
+        <h3>NS Records (Name Servers)</h3>
+        <table>
+            <tr>
+                <th>Name Server</th>
+                <th>IP Address</th>
+                <th>ASN</th>
+                <th>Country</th>
+            </tr>
+            {% for record in report.dns.NS %}
+            {% if record.ns_host %}
+                {% for ip_info in record.ips %}
+                <tr>
+                    <td>{{ record.ns_host }}</td>
+                    <td>{{ ip_info.ip }}</td>
+                    <td>{{ ip_info.asn or 'N/A' }}</td>
+                    <td>{{ ip_info.country or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td>{{ record.target if record.target else record }}</td>
+                    <td>N/A</td>
+                    <td>N/A</td>
+                    <td>N/A</td>
+                </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if report.dns.TXT %}
+        <h3>TXT Records</h3>
+        <table>
+            <tr>
+                <th>Text Record</th>
+            </tr>
+            {% for record in report.dns.TXT %}
+            <tr>
+                <td style="word-break: break-all;">{{ record.txt if record.txt else record }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- SSL Certificate -->
+    {% if report.certificados %}
+    <div class="section">
+        <h2>SSL Certificate Information</h2>
+        
+        {% for cert in report.certificados %}
+        <h3>Certificate {{ loop.index }}</h3>
+        <table>
+            <tr>
+                <th width="25%">Fingerprint</th>
+                <td class="fingerprint">{{ cert.fingerprint }}</td>
+            </tr>
+            <tr>
+                <th>Key Algorithm</th>
+                <td>{{ cert.key_algorithm }}</td>
+            </tr>
+            <tr>
+                <th>Version</th>
+                <td>{{ cert.version }}</td>
+            </tr>
+            <tr>
+                <th>Serial Number</th>
+                <td>{{ cert.serial_number }}</td>
+            </tr>
+        </table>
+
+        {% if cert.alternative_names %}
+        <h4>Alternative Names</h4>
+        <table>
+            <tr><th>Domain</th></tr>
+            {% for domain in cert.alternative_names %}
+            <tr><td>{{ domain }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Related Domains -->
+    {% if report.dominios_relacionados %}
+    <div class="section">
+        <h2>Related Domains ({{ report.dominios_relacionados|length }})</h2>
+        <table>
+            <tr>
+                <th>Domain</th>
+            </tr>
+            {% for domain in report.dominios_relacionados %}
+            <tr>
+                <td>{{ domain }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>This report was automatically generated on {{ report.fecha_consulta.strftime('%Y-%m-%d %H:%M:%S') if report.fecha_consulta else 'N/A' }}</p>
+        <p>The information contained is for reference only and should be verified independently.</p>
+        <p>Generated by DNS Intelligence System</p>
+    </div>
+</body>
+</html>

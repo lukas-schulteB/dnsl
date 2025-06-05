@@ -1,0 +1,50 @@
+name: Deploy Main Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dns/main_service/**'
+      - 'dns/docker-compose.celery-worker.yml'
+  workflow_dispatch:  # Para activación manual
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy Main Service
+        run: |
+          # Ir al directorio del proyecto
+          cd dns
+          
+          # Detener los contenedores actuales
+          docker-compose -f docker-compose.celery-worker.yml down celery_worker celery_beat
+          
+          # PASO CLAVE: Limpieza de documentos - importante limpiar tanto main_iniciado como worker_id
+          docker run --rm --network dominios_net mongo:7.0 mongosh "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/admin" \
+            --eval 'use dominios_db; db.dominios_pendientes.updateMany(
+              {"procesado_por.main": false, "procesado_por.main_iniciado": {$exists: true}},
+              {$unset: {"procesado_por.main_iniciado": "", "procesado_por.worker_id": ""}}
+            )'
+          
+          # El código ya está actualizado por checkout
+          
+          # Reconstruir y reiniciar los contenedores
+          docker-compose -f docker-compose.celery-worker.yml build celery_worker celery_beat
+          docker-compose -f docker-compose.celery-worker.yml up -d celery_worker celery_beat
+          
+          # Verificar que los servicios estén ejecutándose
+          docker-compose -f docker-compose.celery-worker.yml ps celery_worker celery_beat
+        env:
+          MONGO_USER: ${{ secrets.MONGO_USER }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+          RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+          RABBITMQ_VHOST: ${{ secrets.RABBITMQ_VHOST }}

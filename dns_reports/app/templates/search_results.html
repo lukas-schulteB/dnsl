@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results: {{ query }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    {% extends "base.html" %}
+
+    {% block title %}Search Results: {{ query }}{% endblock %}
+
+    {% block content %}
+    <div class="container mt-4">
+        <h1>Search Results for "{{ query }}"</h1>
+        
+        <div class="mb-3">
+            <form action="/search" method="GET" class="d-flex">
+                <input type="text" name="q" class="form-control me-2" value="{{ query }}">
+                <button class="btn btn-primary" type="submit">Search</button>
+            </form>
+        </div>
+        
+        {% if results %}
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Titular</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>{{ result.dominio }}</td>
+                            <td>
+                                {% if result.empresa and result.empresa.denominacion %}
+                                    <a href="/company-details/{{ result.dominio }}">{{ result.empresa.denominacion }}</a>
+                                {% else %}
+                                    {{ result.titular or "Unknown" }}
+                                {% endif %}
+                            </td>
+                            <td>{{ result.fecha_consulta.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/report/{{ result.dominio }}" class="btn btn-sm btn-primary">Ver informe</a>
+                                    {% if result.empresa %}
+                                    <a href="/company-details/{{ result.dominio }}" class="btn btn-sm btn-info">Detalles empresa</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No results found for "{{ query }}". Try a different search term.
+        </div>
+        {% endif %}
+        
+        <div class="mt-3">
+            <a href="/" class="btn btn-secondary">Back to Search</a>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+        {{ super() }} 
+        {# Esto asegura que si base.html tiene scripts en su bloque 'scripts', se incluyan. #}
+        {# Puedes añadir scripts JavaScript específicos para esta página aquí si los necesitas. #}
+    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

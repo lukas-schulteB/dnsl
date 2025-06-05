@@ -1,0 +1,44 @@
+name: Deploy OpenData Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dns/collectors/opendata_service/**'
+      - 'dns/docker-compose.opendata.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy OpenData Service
+        run: |
+          # Ir al directorio del proyecto
+          cd dns
+          
+          # Detener el contenedor actual
+          docker-compose -f docker-compose.opendata.yml down opendata_worker
+          
+          # PASO CLAVE: Ejecutar la limpieza de documentos atascados
+          docker run --rm --network dominios_net mongo:7.0 mongosh "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/admin" \
+            --eval 'use dominios_db; db.dominios_pendientes.updateMany({"procesado_por.opendata": false, "procesado_por.opendata_iniciado": {$exists: true}}, {$unset: {"procesado_por.opendata_iniciado": ""}})'
+          
+          # El código ya está actualizado por checkout
+          
+          # Reconstruir y reiniciar el contenedor
+          docker-compose -f docker-compose.opendata.yml build opendata_worker
+          docker-compose -f docker-compose.opendata.yml up -d opendata_worker
+        env:
+          MONGO_USER: ${{ secrets.MONGO_USER }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+          RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+          RABBITMQ_VHOST: ${{ secrets.RABBITMQ_VHOST }}

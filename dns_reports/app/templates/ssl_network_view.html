@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}SSL Network: {{ fingerprint[:12] }}...{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="/ssl-network"><i class="bi bi-shield-lock"></i> SSL Networks</a></li>
+            <li class="breadcrumb-item active">{{ fingerprint[:12] }}...</li>
+        </ol>
+    </nav>
+
+    <!-- ✅ HEADER CENTRADO CON BOTÓN EN LÍNEA SEPARADA -->
+    <div class="text-center mb-4">
+        <h1><i class="bi bi-diagram-3 text-primary me-2"></i>SSL Certificate Network</h1>
+        <p class="text-muted">Analyzing domains sharing certificate: <code class="text-break">{{ fingerprint }}</code></p>
+        <a href="/ssl-network" class="btn btn-outline-primary mt-2">
+            <i class="bi bi-search me-2"></i>New Search
+        </a>
+    </div>
+
+    <!-- Información del certificado -->
+    <div class="alert alert-info border-start border-5 border-info d-flex align-items-center mb-4">
+        <i class="bi bi-info-circle-fill me-3 text-info" style="font-size: 1.5em;"></i>
+        <div>
+            <strong>{{ domain_count }}</strong> domains share this SSL certificate.
+            {% if domain_count > 1 %}
+            This indicates they may be hosted on the same infrastructure or managed by the same organization.
+            {% endif %}
+        </div>
+    </div>
+
+    {% if cert_info %}
+    <!-- Detalles del certificado -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-shield-fill-check me-2"></i>Certificate Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark">Fingerprint:</label>
+                        <!-- ✅ FONDO BLANCO Y TEXTO NEGRO PARA CÓDIGOS -->
+                        <div class="p-3 border rounded mt-2" style="background-color: white; border: 2px solid #dee2e6;">
+                            <code style="color: #000000; font-size: 14px; background: none;">{{ cert_info.fingerprint }}</code>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark">Key Algorithm:</label>
+                        <div class="mt-2">
+                            <span class="badge bg-primary fs-6 px-3 py-2">{{ cert_info.key_algorithm }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark">Version:</label>
+                        <div class="mt-2">
+                            <span class="badge bg-success fs-6 px-3 py-2">{{ cert_info.version }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark">Serial Number:</label>
+                        <!-- ✅ FONDO BLANCO Y TEXTO NEGRO PARA CÓDIGOS -->
+                        <div class="p-3 border rounded mt-2" style="background-color: white; border: 2px solid #dee2e6;">
+                            <code style="color: #000000; font-size: 14px; background: none;">{{ cert_info.serial_number }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if domains %}
+    <!-- Lista de dominios -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Domains using this certificate ({{ domains|length }})</h5>
+        </div>
+        <div class="card-body">
+            <!-- Tabla responsiva -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="10%" class="text-center">#</th>
+                            <th width="65%">Domain</th>
+                            <th width="25%" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for domain in domains %}
+                        <tr>
+                            <td class="text-center text-muted fw-bold">{{ loop.index }}</td>
+                            <td>
+                                <i class="bi bi-globe text-primary me-2"></i>
+                                <strong class="text-dark">{{ domain.dominio }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <a href="/report/{{ domain.dominio }}" 
+                                   class="btn btn-primary btn-sm"
+                                   target="_blank">
+                                    <i class="bi bi-file-text me-1"></i>View Report
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Estadísticas rápidas -->
+            <div class="row mt-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-primary text-white text-center">
+                        <div class="card-body">
+                            <h3 class="fw-bold">{{ domains|length }}</h3>
+                            <p class="mb-0">Total Domains</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-success text-white text-center">
+                        <div class="card-body">
+                            <h3 class="fw-bold">{{ cert_info.key_algorithm if cert_info else 'N/A' }}</h3>
+                            <p class="mb-0">Key Algorithm</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-info text-white text-center">
+                        <div class="card-body">
+                            <h3 class="fw-bold">v{{ cert_info.version if cert_info else 'N/A' }}</h3>
+                            <p class="mb-0">SSL Version</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Botones de acción -->
+    <div class="text-center mt-4 mb-5">
+        <div class="btn-group" role="group">
+            <a href="/ssl-network" class="btn btn-primary">
+                <i class="bi bi-search me-2"></i>New Search
+            </a>
+            <a href="/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+            <a href="/" class="btn btn-outline-info">
+                <i class="bi bi-house me-2"></i>Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

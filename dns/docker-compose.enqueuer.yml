@@ -1,0 +1,25 @@
+services:
+  enqueuer:
+    build:
+      context: ./enqueuer
+      dockerfile: Dockerfile
+    container_name: enqueuer
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/
+      - PYTHONPATH=/app
+    command: >
+      bash -c "echo 'Waiting for services to be ready...' &&
+               sleep 20 &&
+               python import_domains.py /app/RISP_OTROS.csv &&
+               echo 'Dominios importados a MongoDB correctamente.' &&
+               sleep 5"
+    volumes:
+      - ./enqueuer/RISP_OTROS.csv:/app/RISP_OTROS.csv
+    restart: "no"
+    networks:
+      - dominios_net
+
+networks:
+  dominios_net:
+    external: true

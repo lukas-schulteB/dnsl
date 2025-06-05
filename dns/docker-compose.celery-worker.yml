@@ -1,0 +1,44 @@
+services:
+  celery_worker:
+    build:
+      context: ./main_service
+      dockerfile: Dockerfile
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/
+      - PYTHONPATH=/app
+    command: >
+      bash -c "celery -A tasks worker --loglevel=warning --pool=prefork --concurrency=8 -Q main_queue -n main_worker@%h &
+              wait"
+    volumes:
+      - ./main_service/ip_rangos.csv:/app/ip_rangos.csv
+      - type: tmpfs
+        target: /tmp
+    deploy:
+      mode: replicated
+      replicas: 6
+      resources:
+        limits:
+          cpus: "3"
+          memory: 8G
+    networks:
+      - dominios_net
+    
+  celery_beat:
+    build:
+      context: ./main_service
+      dockerfile: Dockerfile
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/
+      - PYTHONPATH=/app
+    command: >
+      bash -c "celery -A tasks beat --loglevel=info"
+    volumes:
+      - ./main_service/ip_rangos.csv:/app/ip_rangos.csv
+    networks:
+      - dominios_net
+
+networks:
+  dominios_net:
+    external: true

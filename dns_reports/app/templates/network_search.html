@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Visualización de Redes{% endblock %}
+
+{% block content %}
+    <!-- ✅ Solo título centrado arriba -->
+    <div class="text-center mb-4">
+        <h1>Visualización de Redes de Empresas y Dominios</h1>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-project-diagram me-2"></i>Buscar Empresa o NIF</h4>
+                </div>
+                <div class="card-body">
+                    <form action="/network" method="GET">
+                        <div class="mb-3">
+                            <label for="q" class="form-label">Introduce el nombre de una empresa o NIF</label>
+                            <input type="text" name="q" id="q" class="form-control" placeholder="Ej: Telefónica, A12345678..." required>
+                            <div class="form-text">
+                                La búsqueda generará un gráfico de red mostrando las relaciones entre empresas y sus dominios.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tipos de relaciones a mostrar</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="relation" id="all" value="all" checked>
+                                <label class="form-check-label" for="all">
+                                    <i class="fas fa-sitemap me-1"></i>Todas las relaciones
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="relation" id="domains" value="domains">
+                                <label class="form-check-label" for="domains">
+                                    <i class="fas fa-globe me-1"></i>Solo dominios (relación directa)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="relation" id="sector" value="sector">
+                                <label class="form-check-label" for="sector">
+                                    <i class="fas fa-industry me-1"></i>Por sector (mismo CNAE)
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                Selecciona qué tipo de relaciones quieres visualizar en la red.
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary w-100" type="submit">
+                            <i class="fas fa-search me-2"></i>Visualizar Red
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-info-circle me-2"></i>¿Qué es la visualización de redes?</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>La visualización de redes te permite:</p>
+                        <ul>
+                            <li><i class="fas fa-check text-success me-2"></i>Ver las relaciones entre empresas y sus dominios web</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Descubrir entramados empresariales complejos</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Identificar conexiones entre diferentes entidades</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Analizar el alcance digital de una organización</li>
+                        </ul>
+                        <p class="mb-0">Introduce el nombre de una empresa o su NIF para generar una visualización interactiva.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ✅ Botones de navegación centrados abajo -->
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    <i class="fas fa-home me-1"></i>Menú Principal
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

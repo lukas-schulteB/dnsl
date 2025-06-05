@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.denominacion or nif }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">{{ company.denominacion or nif }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-building me-2"></i>{{ company.denominacion or ("Empresa " + nif) }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-id-card me-2"></i>NIF:</strong> {{ company.nif or nif }}</p>
+                        {% if company.domicilio and company.domicilio.provincia %}
+                        <p><strong><i class="fas fa-map-marker-alt me-2"></i>Provincia:</strong> {{ company.domicilio.provincia }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if company.actividad_economica and company.actividad_economica.cnae_descripcion %}
+                        <p><strong><i class="fas fa-industry me-2"></i>Sector:</strong> {{ company.actividad_economica.cnae_descripcion }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if company.domicilio %}
+                <hr>
+                <h5><i class="fas fa-address-card me-2"></i>Domicilio</h5>
+                <div class="row">
+                    {% if company.domicilio.direccion %}
+                    <div class="col-md-6">
+                        <p><strong>Dirección:</strong> {{ company.domicilio.direccion }}</p>
+                    </div>
+                    {% endif %}
+                    {% if company.domicilio.codigo_postal %}
+                    <div class="col-md-3">
+                        <p><strong>CP:</strong> {{ company.domicilio.codigo_postal }}</p>
+                    </div>
+                    {% endif %}
+                    {% if company.domicilio.localidad %}
+                    <div class="col-md-3">
+                        <p><strong>Localidad:</strong> {{ company.domicilio.localidad }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+            </div>
+            <div class="card-body">
+                <p><strong><i class="fas fa-globe me-2"></i>Dominios:</strong> {{ domains|length }}</p>
+                {% set subdomains_total = 0 %}
+                {% for domain in domains %}
+                    {% if domain.subdominios %}
+                        {% set subdomains_total = subdomains_total + domain.subdominios|length %}
+                    {% endif %}
+                {% endfor %}
+                <p><strong><i class="fas fa-sitemap me-2"></i>Subdominios:</strong> {{ subdomains_total }}</p>
+                
+                <div class="mt-3">
+                    <a href="/network?q={{ company.nif or nif }}&relation=all" class="btn btn-primary btn-sm">
+                        <i class="fas fa-project-diagram me-1"></i>Ver red
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h4><i class="fas fa-globe me-2"></i>Dominios Asociados ({{ domains|length }})</h4>
+    </div>
+    <div class="card-body">
+        {% if domains %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-globe me-1"></i>Dominio</th>
+                        <th><i class="fas fa-calendar me-1"></i>Fecha consulta</th>
+                        <th><i class="fas fa-sitemap me-1"></i>Subdominios</th>
+                        <th><i class="fas fa-cogs me-1"></i>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for domain in domains %}
+                    <tr>
+                        <td>
+                            <a href="/report/{{ domain.dominio }}" class="text-decoration-none">
+                                {{ domain.dominio }}
+                            </a>
+                        </td>
+                        <td>{{ domain.fecha_consulta or 'N/A' }}</td>
+                        <td>
+                            {% if domain.subdominios %}
+                                <span class="badge bg-info">{{ domain.subdominios|length }}</span>
+                            {% else %}
+                                <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/report/{{ domain.dominio }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Ver
+                            </a>
+                            {% if domain.dns and domain.dns.A %}
+                            <a href="/network?q={{ domain.dominio }}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-project-diagram me-1"></i>Red
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>No se encontraron dominios para esta empresa.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

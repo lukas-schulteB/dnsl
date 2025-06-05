@@ -1,0 +1,49 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+
+# MongoDB - Ignorar datos pero mantener configuración
+/mongo/.mongodb/
+/mongo/diagnostic.data/
+/mongo/journal/
+/mongo/*.wt
+/mongo/*.bson
+/mongo/*.lock
+/mongo/WiredTiger*
+/mongo/mongod.lock
+/mongo/_mdb_catalog.wt
+/mongo/collection-*
+/mongo/index-*
+/mongo/sizeStorer.wt
+/mongo/storage.bson
+
+# Archivos específicos del proyecto
+dns/enqueuer/RISP_OTROS.csv
+dns/main_service/ip_rangos.csv

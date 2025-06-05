@@ -1,0 +1,44 @@
+name: Deploy Certgraph Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dns/collectors/certgraph_service/**'
+      - 'dns/docker-compose.certgraph.yml'
+  workflow_dispatch:  # Para activación manual
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy Certgraph Service
+        run: |
+          # Ir al directorio del proyecto
+          cd dns
+          
+          # Detener el contenedor actual
+          docker-compose -f docker-compose.certgraph.yml down certgraph_worker
+          
+          # PASO CLAVE: Ejecutar la limpieza usando Docker con la red correcta
+          docker run --rm --network dominios_net mongo:7.0 mongosh "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/admin" \
+            --eval 'use dominios_db; db.dominios_pendientes.updateMany({"procesado_por.certgraph": false, "procesado_por.certgraph_iniciado": {$exists: true}}, {$unset: {"procesado_por.certgraph_iniciado": ""}})'
+          
+          # El código ya está actualizado por checkout
+          
+          # Reconstruir y reiniciar el contenedor
+          docker-compose -f docker-compose.certgraph.yml build certgraph_worker
+          docker-compose -f docker-compose.certgraph.yml up -d certgraph_worker
+        env:
+          MONGO_USER: ${{ secrets.MONGO_USER }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+          RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+          RABBITMQ_VHOST: ${{ secrets.RABBITMQ_VHOST }}

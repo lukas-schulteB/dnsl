@@ -1,0 +1,28 @@
+services:
+  certgraph_worker:
+    build:
+      context: ./collectors/certgraph_service
+      dockerfile: Dockerfile
+    container_name: certgraph_worker
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/
+      - PYTHONPATH=/app
+      - COLLECTOR_TYPE=certgraph
+      - DEBUG=1
+      - CERTGRAPH_TIMEOUT=90
+    command: >
+      bash -c "echo 'Iniciando servicios...' && 
+              celery -A tasks worker --loglevel=info --pool=prefork --concurrency=4 --queues=certgraph_tasks &
+              python -c 'from tasks import worker_loop; worker_loop()' &
+              wait"
+    volumes:
+      - ./collectors/certgraph_service:/app
+      - type: tmpfs
+        target: /tmp
+    restart: unless-stopped
+    networks:
+      - dominios_net
+networks:
+  dominios_net:
+    external: true
